@@ -1,0 +1,18 @@
+spring:
+  profiles:
+    active: local
+  application:
+    name: case-flash-sale
+
+server:
+  port: 8200
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}

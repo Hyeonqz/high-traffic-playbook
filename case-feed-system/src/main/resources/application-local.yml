@@ -1,0 +1,72 @@
+spring:
+  # DataSource 설정
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/high_traffic?useSSL=false&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+    username: root
+    password: 1234
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      pool-name: FeedSystemHikariCP
+
+  # JPA 설정
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: validate
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        implicit-strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+        use_sql_comments: true
+        default_batch_fetch_size: 100
+        jdbc:
+          batch_size: 20
+          order_inserts: true
+          order_updates: true
+        query:
+          in_clause_parameter_padding: true
+          plan_cache_max_size: 2048
+        generate_statistics: false
+    open-in-view: false
+
+  # Kafka Consumer Group ID (모듈별 고유 설정)
+  kafka:
+    consumer:
+      group-id: feed-system-group
+
+  # Spring Boot Admin Client 설정
+  boot:
+    admin:
+      client:
+        url: http://localhost:9900/admin
+        instance:
+          prefer-ip: true
+          service-base-url: http://localhost:8100
+        username: ${ADMIN_USERNAME:admin}
+        password: ${ADMIN_PASSWORD:admin123!}
+
+# Management Endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    io.github.hyeonqz: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.kafka: INFO

@@ -1,0 +1,18 @@
+spring:
+  profiles:
+    active: local
+  application:
+    name: case-feed-system
+
+server:
+  port: 8100
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
