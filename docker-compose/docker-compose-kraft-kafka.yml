@@ -1,5 +1,5 @@
+name: high-traffic-infra
 version: '3.8'
-
 services:
   kafka00:
     image: confluentinc/cp-kafka:latest
@@ -165,8 +165,9 @@ services:
 
 networks:
   kafka_network:
-    name: kraft_kafka_network
+    name: high-traffic-network
     driver: bridge
+    external: true
 
 volumes:
   kafka00:

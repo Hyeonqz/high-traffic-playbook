@@ -1,0 +1,130 @@
+name: high-traffic-infra
+version: '3.8'
+
+services:
+  # ============================================
+  # MySQL - Master (Write DB)
+  # ============================================
+  mysql-master:
+    image: mysql:8.0
+    hostname: mysql-master
+    container_name: mysql-master
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+      MYSQL_DATABASE: ticketing
+      MYSQL_USER: ticketing_user
+      MYSQL_PASSWORD: ticketing1234
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      # Master Replication 설정
+      - --server-id=1
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --sync-binlog=1
+      - --gtid-mode=ON
+      - --enforce-gtid-consistency=ON
+      # Performance 튜닝
+      - --max-connections=500
+      - --innodb-buffer-pool-size=1G
+      - --innodb-log-file-size=256M
+      - --innodb-flush-log-at-trx-commit=1
+      - --innodb-flush-method=O_DIRECT
+    volumes:
+      - mysql-master-data:/var/lib/mysql
+    networks:
+      - high-traffic-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot1234"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ============================================
+  # MySQL - Replica (Read DB)
+  # ============================================
+  mysql-replica:
+    image: mysql:8.0
+    hostname: mysql-replica
+    container_name: mysql-replica
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+      MYSQL_DATABASE: ticketing
+      MYSQL_USER: ticketing_user
+      MYSQL_PASSWORD: ticketing1234
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      # Replica Replication 설정
+      - --server-id=2
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --gtid-mode=ON
+      - --enforce-gtid-consistency=ON
+      - --read-only=1
+      - --relay-log=mysql-relay-bin
+      # Performance 튜닝 (Read 최적화)
+      - --max-connections=1000
+      - --innodb-buffer-pool-size=1G
+      - --innodb-log-file-size=256M
+      - --innodb-flush-log-at-trx-commit=2
+      # Note: Query Cache는 MySQL 8.0에서 제거됨
+    volumes:
+      - mysql-replica-data:/var/lib/mysql
+      - ./mysql/init-replica.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - high-traffic-network
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot1234"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ============================================
+  # phpMyAdmin (MySQL GUI)
+  # ============================================
+  phpmyadmin:
+    image: phpmyadmin:latest
+    hostname: phpmyadmin
+    container_name: phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    environment:
+      PMA_HOSTS: mysql-master,mysql-replica
+      PMA_PORTS: 3306,3306
+      PMA_USER: root
+      PMA_PASSWORD: root1234
+      UPLOAD_LIMIT: 100M
+    networks:
+      - high-traffic-network
+    depends_on:
+      - mysql-master
+      - mysql-replica
+
+networks:
+  high-traffic-network:
+    name: high-traffic-network
+    driver: bridge
+    external: true
+
+volumes:
+  mysql-master-data:
+    driver: local
+  mysql-replica-data:
+    driver: local

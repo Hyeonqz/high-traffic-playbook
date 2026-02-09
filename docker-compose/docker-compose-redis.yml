@@ -1,0 +1,90 @@
+name: high-traffic-infra
+version: '3.8'
+
+services:
+  # ============================================
+  # Redis - Queue (대기열 전용)
+  # ============================================
+  redis-queue:
+    image: redis:latest
+    hostname: redis-queue
+    container_name: redis-queue
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --appendonly yes
+      --appendfsync everysec
+    volumes:
+      - redis-queue-data:/data
+    networks:
+      - high-traffic-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ============================================
+  # Redis - Cache (캐싱 전용)
+  # ============================================
+  redis-cache:
+    image: redis:latest
+    hostname: redis-cache
+    container_name: redis-cache
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    command: >
+      redis-server
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lfu
+      --save ""
+      --appendonly no
+    volumes:
+      - redis-cache-data:/data
+    networks:
+      - high-traffic-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ============================================
+  # Redis Commander (Redis GUI)
+  # ============================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    hostname: redis-commander
+    container_name: redis-commander
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: >
+        queue:redis-queue:6379,
+        cache:redis-cache:6379
+    networks:
+      - high-traffic-network
+    depends_on:
+      - redis-queue
+      - redis-cache
+
+networks:
+  high-traffic-network:
+    name: high-traffic-network
+    driver: bridge
+    external: true
+
+volumes:
+  redis-queue-data:
+    driver: local
+  redis-cache-data:
+    driver: local

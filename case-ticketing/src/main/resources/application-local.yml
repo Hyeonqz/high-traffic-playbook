@@ -1,19 +1,42 @@
 spring:
-  # DataSource 설정
+  # ============================================
+  # MySQL DataSource 설정 (Master-Replica CQRS)
+  # ============================================
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/high_traffic?useSSL=false&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
-    username: root
-    password: 1234
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      pool-name: TicketingHikariCP
+    # Master DataSource (Write)
+    master:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: jdbc:mysql://localhost:3306/ticketing?useSSL=false&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+      username: root
+      password: root1234
+      hikari:
+        pool-name: MasterHikariCP
+        maximum-pool-size: 50
+        minimum-idle: 10
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        connection-test-query: SELECT 1
 
+    # Replica DataSource (Read)
+    replica:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: jdbc:mysql://localhost:3307/ticketing?useSSL=false&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+      username: root
+      password: root1234
+      hikari:
+        pool-name: ReplicaHikariCP
+        maximum-pool-size: 100
+        minimum-idle: 20
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        connection-test-query: SELECT 1
+        read-only: true
+
+  # ============================================
   # JPA 설정
+  # ============================================
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
@@ -37,12 +60,73 @@ spring:
         generate_statistics: false
     open-in-view: false
 
-  # Kafka Consumer Group ID (모듈별 고유 설정)
+  # ============================================
+  # Redis 설정 (Queue + Cache)
+  # ============================================
+  data:
+    redis:
+      # Redis Queue (대기열 전용)
+      queue:
+        host: localhost
+        port: 6379
+        password:
+        database: 0
+        timeout: 3000ms
+        lettuce:
+          pool:
+            max-active: 50
+            max-idle: 20
+            min-idle: 10
+            max-wait: 3000ms
+
+      # Redis Cache (캐싱 전용)
+      cache:
+        host: localhost
+        port: 6380
+        password:
+        database: 0
+        timeout: 3000ms
+        lettuce:
+          pool:
+            max-active: 100
+            max-idle: 30
+            min-idle: 10
+            max-wait: 3000ms
+
+  # ============================================
+  # Kafka 설정
+  # ============================================
   kafka:
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
     consumer:
       group-id: ticketing-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    listener:
+      ack-mode: manual
 
+  # ============================================
+  # Cache 설정
+  # ============================================
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000  # 1시간 (ms)
+      cache-null-values: false
+      key-prefix: "cache:"
+
+  # ============================================
   # Spring Boot Admin Client 설정
+  # ============================================
   boot:
     admin:
       client:
@@ -53,7 +137,9 @@ spring:
         username: ${ADMIN_USERNAME:admin}
         password: ${ADMIN_PASSWORD:admin123!}
 
+# ============================================
 # Management Endpoints
+# ============================================
 management:
   endpoints:
     web:
@@ -62,11 +148,40 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    redis:
+      enabled: true
+    db:
+      enabled: true
 
+# ============================================
 # Logging
+# ============================================
 logging:
   level:
     io.github.hyeonqz: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.kafka: INFO
+    org.springframework.data.redis: DEBUG
+    com.zaxxer.hikari: DEBUG
+
+# ============================================
+# Custom Application Properties
+# ============================================
+app:
+  # 대기열 설정
+  queue:
+    max-size: 100000
+    admit-rate: 1000  # 초당 입장 허용 수
+    token-expire-seconds: 300  # 토큰 유효 시간 (5분)
+
+  # Rate Limiting 설정
+  rate-limit:
+    general-api: 10  # 일반 API: 초당 10 요청/사용자
+    reservation-api: 1  # 예매 API: 초당 1 요청/사용자
+    queue-api: 5  # 대기열 API: 초당 5 요청/사용자
+
+  # 재고 관리 설정
+  inventory:
+    sync-interval-seconds: 60  # Redis-MySQL 재고 동기화 간격
