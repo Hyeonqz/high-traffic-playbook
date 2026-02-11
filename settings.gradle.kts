@@ -3,8 +3,6 @@ plugins {
 }
 rootProject.name = "high-traffic-playbook"
 include("core-common")
-include("core-redis")
-include("core-kafka")
 include("case-ticketing")
 include("case-flash-sale")
 include("case-feed-system")
