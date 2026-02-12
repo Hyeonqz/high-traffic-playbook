@@ -13,8 +13,13 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 1
 fi
 
+# [수정] 스크립트 위치(/docker-compose/scripts)를 기준으로 상위 폴더(/docker-compose)로 이동
+BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$BASE_DIR"
+
 echo ""
 echo "🗑️  대용량 트래픽 처리 시스템 인프라를 완전 삭제합니다..."
+echo "📂 작업 디렉토리: $BASE_DIR"
 echo ""
 
 # MySQL 완전 삭제
@@ -26,7 +31,7 @@ echo ""
 # Redis 완전 삭제
 echo "💾 Redis 완전 삭제 중..."
 docker compose -f docker-compose-redis.yml down -v
-echo "   ✅ Redis removed with volumes"
+echo "   ✅ Redis Master-Slave cluster removed with volumes"
 echo ""
 
 # Kafka 완전 삭제

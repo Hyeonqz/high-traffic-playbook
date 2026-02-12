@@ -61,37 +61,31 @@ spring:
     open-in-view: false
 
   # ============================================
-  # Redis 설정 (Queue + Cache)
+  # Redis 설정 (Master-Slave with Sentinel)
   # ============================================
   data:
     redis:
-      # Redis Queue (대기열 전용)
-      queue:
-        host: localhost
-        port: 6379
-        password:
-        database: 0
-        timeout: 3000ms
-        lettuce:
-          pool:
-            max-active: 50
-            max-idle: 20
-            min-idle: 10
-            max-wait: 3000ms
+      # Sentinel 모드 설정
+      sentinel:
+        master: mymaster
+        nodes:
+          - localhost:26379
+      password:
+      database: 0
+      timeout: 3000ms
 
-      # Redis Cache (캐싱 전용)
-      cache:
-        host: localhost
-        port: 6380
-        password:
-        database: 0
-        timeout: 3000ms
-        lettuce:
-          pool:
-            max-active: 100
-            max-idle: 30
-            min-idle: 10
-            max-wait: 3000ms
+      # Lettuce 설정
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+          max-wait: 3000ms
+        shutdown-timeout: 200ms
+
+      # 읽기 전략: Slave 우선 읽기 (부하 분산)
+      # 옵션: MASTER, MASTER_PREFERRED, REPLICA, REPLICA_PREFERRED
+      client-type: lettuce
 
   # ============================================
   # Kafka 설정
@@ -160,11 +154,12 @@ management:
 logging:
   level:
     io.github.hyeonqz: DEBUG
-    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL: INFO
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.kafka: INFO
     org.springframework.data.redis: DEBUG
-    com.zaxxer.hikari: DEBUG
+    io.lettuce.core: DEBUG
+    com.zaxxer.hikari: INFO
 
 # ============================================
 # Custom Application Properties

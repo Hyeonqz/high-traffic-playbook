@@ -6,7 +6,12 @@
 
 set -e  # 에러 발생 시 스크립트 중단
 
+# [수정] 스크립트 위치(/docker-compose/scripts)를 기준으로 상위 폴더(/docker-compose)로 이동
+BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$BASE_DIR"
+
 echo "🚀 대용량 트래픽 처리 시스템 인프라를 시작합니다..."
+echo "📂 작업 디렉토리: $BASE_DIR"
 echo ""
 
 # ============================================
@@ -34,13 +39,14 @@ echo "   - kafka-ui: http://localhost:8989"
 echo ""
 
 # ============================================
-# 3. Redis 시작
+# 3. Redis Master-Slave + Sentinel 시작
 # ============================================
-echo "💾 Redis 인스턴스 시작 중..."
+echo "💾 Redis Master-Slave 클러스터 시작 중..."
 docker compose -f docker-compose-redis.yml up -d
-echo "   ✅ Redis instances started"
-echo "   - redis-queue: localhost:6379 (대기열 전용)"
-echo "   - redis-cache: localhost:6380 (캐싱 전용)"
+echo "   ✅ Redis cluster started"
+echo "   - redis-master: localhost:6379 (읽기/쓰기)"
+echo "   - redis-slave: localhost:6380 (읽기 전용)"
+echo "   - redis-sentinel: localhost:26379 (자동 Failover)"
 echo "   - redis-commander: http://localhost:8081"
 echo ""
 
@@ -80,7 +86,7 @@ echo "   - phpMyAdmin:      http://localhost:8082"
 echo ""
 echo "🔍 상태 확인:"
 echo "   docker compose -f docker-compose-kraft-kafka.yml ps"
-echo "   docker compose -f docker-compose-redis.yml ps"
+echo "   docker compose -f docker-compose-redis-replication.yml ps"
 echo "   docker compose -f docker-compose-mysql.yml ps"
 echo ""
 echo "🛑 전체 종료:"

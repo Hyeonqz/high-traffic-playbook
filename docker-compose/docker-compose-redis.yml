@@ -3,24 +3,24 @@ version: '3.8'
 
 services:
   # ============================================
-  # Redis - Queue (대기열 전용)
+  # Redis Master (읽기/쓰기)
   # ============================================
-  redis-queue:
+  redis-master:
     image: redis:latest
-    hostname: redis-queue
-    container_name: redis-queue
+    hostname: redis-master
+    container_name: redis-master
     restart: unless-stopped
     ports:
       - "6379:6379"
     command: >
       redis-server
-      --maxmemory 2gb
+      --maxmemory 4gb
       --maxmemory-policy allkeys-lru
       --save 60 1000
       --appendonly yes
       --appendfsync everysec
     volumes:
-      - redis-queue-data:/data
+      - redis-master-data:/data
     networks:
       - high-traffic-network
     healthcheck:
@@ -31,31 +31,61 @@ services:
       start_period: 30s
 
   # ============================================
-  # Redis - Cache (캐싱 전용)
+  # Redis Slave (읽기 전용 복제본)
   # ============================================
-  redis-cache:
+  redis-slave:
     image: redis:latest
-    hostname: redis-cache
-    container_name: redis-cache
+    hostname: redis-slave
+    container_name: redis-slave
     restart: unless-stopped
     ports:
       - "6380:6379"
     command: >
       redis-server
-      --maxmemory 2gb
-      --maxmemory-policy allkeys-lfu
-      --save ""
-      --appendonly no
+      --replicaof redis-master 6379
+      --replica-read-only yes
+      --maxmemory 4gb
+      --maxmemory-policy allkeys-lru
     volumes:
-      - redis-cache-data:/data
+      - redis-slave-data:/data
     networks:
       - high-traffic-network
+    depends_on:
+      - redis-master
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ============================================
+  # Redis Sentinel (자동 Failover)
+  # ============================================
+  redis-sentinel:
+    image: redis:latest
+    hostname: redis-sentinel
+    container_name: redis-sentinel
+    restart: unless-stopped
+    ports:
+      - "26379:26379"
+    entrypoint: ["/bin/sh", "/sentinel-entrypoint.sh"]
+    volumes:
+      - ./sentinel-entrypoint.sh:/sentinel-entrypoint.sh:ro
+      - redis-sentinel-data:/data
+    networks:
+      - high-traffic-network
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-slave:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
   # ============================================
   # Redis Commander (Redis GUI)
@@ -69,13 +99,13 @@ services:
       - "8081:8081"
     environment:
       REDIS_HOSTS: >
-        queue:redis-queue:6379,
-        cache:redis-cache:6379
+        master:redis-master:6379,
+        slave:redis-slave:6379
     networks:
       - high-traffic-network
     depends_on:
-      - redis-queue
-      - redis-cache
+      - redis-master
+      - redis-slave
 
 networks:
   high-traffic-network:
@@ -84,7 +114,9 @@ networks:
     external: true
 
 volumes:
-  redis-queue-data:
+  redis-master-data:
     driver: local
-  redis-cache-data:
+  redis-slave-data:
+    driver: local
+  redis-sentinel-data:
     driver: local
