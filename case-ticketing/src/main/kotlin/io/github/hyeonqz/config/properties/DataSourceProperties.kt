@@ -1,4 +1,4 @@
-package io.github.hyeonqz.config
+package io.github.hyeonqz.config.properties
 
 import com.zaxxer.hikari.HikariConfig
 import org.springframework.boot.context.properties.ConfigurationProperties
