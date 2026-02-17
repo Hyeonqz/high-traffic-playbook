@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
-class GlobalExceptionHandler {
+class GlobalExceptionHandler : BaseGlobalExceptionHandler() {
 
     @ExceptionHandler(TicketingException::class)
     fun handleTicketingException(e: TicketingException): ResponseEntity<ErrorResponse> {
@@ -24,16 +24,4 @@ class GlobalExceptionHandler {
             .status(HttpStatus.CONFLICT)
             .body(ErrorResponse(ErrorCode.SEAT_ALREADY_BOOKED.code, ErrorCode.SEAT_ALREADY_BOOKED.message))
     }
-
-    @ExceptionHandler(Exception::class)
-    fun handleException(e: Exception): ResponseEntity<ErrorResponse> {
-        return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ErrorResponse("INTERNAL_ERROR", "서버 내부 오류가 발생했습니다."))
-    }
 }
-
-data class ErrorResponse(
-    val code: String,
-    val message: String,
-)
