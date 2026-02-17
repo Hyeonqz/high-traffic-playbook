@@ -1,6 +1,9 @@
 package io.github.hyeonqz.config
 
 import com.zaxxer.hikari.HikariDataSource
+import io.github.hyeonqz.config.properties.MasterDataSourceProperties
+import io.github.hyeonqz.config.properties.ReplicaDataSourceProperties
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -61,21 +64,25 @@ class DataSourceConfig(
      * Routing DataSource
      * - @Transactional(readOnly=false) → Master
      * - @Transactional(readOnly=true) → Replica
+     *
+     * 빈 직접 호출 대신 @Qualifier 파라미터 주입 사용
+     * - Spring 빈 싱글톤 보장
+     * - AbstractRoutingDataSource.afterPropertiesSet() Spring 생명주기 정상 적용
      */
     @Bean(name = ["routingDataSource"])
-    fun createRoutingDataSource(): DataSource {
-        val masterDs = createMasterDataSource()
-        val replicaDs = createReplicaDataSource()
-
+    fun createRoutingDataSource(
+        @Qualifier("masterDataSource") masterDataSource: DataSource,
+        @Qualifier("replicaDataSource") replicaDataSource: DataSource
+    ): DataSource {
         val routingDataSource = ReplicationRoutingDataSource()
 
         val dataSources = mapOf(
-            DataSourceType.MASTER to masterDs,
-            DataSourceType.REPLICA to replicaDs
+            DataSourceType.MASTER to masterDataSource,
+            DataSourceType.REPLICA to replicaDataSource
         )
 
         routingDataSource.setTargetDataSources(dataSources as Map<Any, Any>)
-        routingDataSource.setDefaultTargetDataSource(masterDs)
+        routingDataSource.setDefaultTargetDataSource(masterDataSource)
 
         return routingDataSource
     }
@@ -87,8 +94,8 @@ class DataSourceConfig(
      */
     @Primary
     @Bean
-    fun dataSource(): DataSource {
-        return LazyConnectionDataSourceProxy(createRoutingDataSource())
+    fun dataSource(@Qualifier("routingDataSource") routingDataSource: DataSource): DataSource {
+        return LazyConnectionDataSourceProxy(routingDataSource)
     }
 }
 

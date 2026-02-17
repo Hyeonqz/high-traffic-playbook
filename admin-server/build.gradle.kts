@@ -19,6 +19,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     // spring admin-server
     implementation("de.codecentric:spring-boot-admin-starter-server")
+    implementation(project(":core-common"))
 
     // test
     testImplementation(platform("org.junit:junit-bom:5.10.0"))

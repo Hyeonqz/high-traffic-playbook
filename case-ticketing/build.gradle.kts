@@ -24,12 +24,14 @@ dependencies {
     // Database
     runtimeOnly("com.mysql:mysql-connector-j")
     runtimeOnly("com.h2database:h2")
+    implementation("org.flywaydb:flyway-mysql")
 
     // Redis Connection Pool
     implementation("org.apache.commons:commons-pool2")
 
     // Module Dependencies
     implementation(project(":core-common"))
+    implementation(project(":module-support"))
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
