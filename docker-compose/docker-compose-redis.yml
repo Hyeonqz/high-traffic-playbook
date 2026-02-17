@@ -87,26 +87,6 @@ services:
       retries: 5
       start_period: 40s
 
-  # ============================================
-  # Redis Commander (Redis GUI)
-  # ============================================
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    hostname: redis-commander
-    container_name: redis-commander
-    restart: unless-stopped
-    ports:
-      - "8081:8081"
-    environment:
-      REDIS_HOSTS: >
-        master:redis-master:6379,
-        slave:redis-slave:6379
-    networks:
-      - high-traffic-network
-    depends_on:
-      - redis-master
-      - redis-slave
-
 networks:
   high-traffic-network:
     name: high-traffic-network
