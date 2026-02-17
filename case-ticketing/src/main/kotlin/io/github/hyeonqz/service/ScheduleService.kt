@@ -3,7 +3,7 @@ package io.github.hyeonqz.service
 import io.github.hyeonqz.domain.SeatStatus
 import io.github.hyeonqz.dto.response.ScheduleResponse
 import io.github.hyeonqz.dto.response.SeatResponse
-import io.github.hyeonqz.exception.ErrorCode
+import io.github.hyeonqz.exception.TicketingErrorCode
 import io.github.hyeonqz.exception.TicketingException
 import io.github.hyeonqz.repository.ScheduleRepository
 import io.github.hyeonqz.repository.SeatRepository
@@ -28,7 +28,7 @@ class ScheduleService(
     @Transactional(readOnly = true)
     fun getSeats(scheduleId: Long): List<SeatResponse> {
         scheduleRepository.findById(scheduleId).orElseThrow {
-            TicketingException(ErrorCode.SCHEDULE_NOT_FOUND)
+            TicketingException(TicketingErrorCode.SCHEDULE_NOT_FOUND)
         }
         return seatRepository.findByScheduleId(scheduleId).map(SeatResponse::from)
     }

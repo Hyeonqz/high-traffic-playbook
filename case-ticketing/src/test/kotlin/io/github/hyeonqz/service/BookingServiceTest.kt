@@ -2,7 +2,7 @@ package io.github.hyeonqz.service
 
 import io.github.hyeonqz.domain.*
 import io.github.hyeonqz.dto.request.BookingRequest
-import io.github.hyeonqz.exception.ErrorCode
+import io.github.hyeonqz.exception.TicketingErrorCode
 import io.github.hyeonqz.exception.TicketingException
 import io.github.hyeonqz.repository.BookingRepository
 import io.github.hyeonqz.repository.SeatRepository
@@ -74,7 +74,7 @@ class BookingServiceTest {
         val thrown = org.junit.jupiter.api.Assertions.assertThrows(TicketingException::class.java) {
             bookingService.reserve(request)
         }
-        assertThat(thrown.errorCode).isEqualTo(ErrorCode.SEAT_ALREADY_BOOKED)
+        assertThat(thrown.errorCode).isEqualTo(TicketingErrorCode.SEAT_ALREADY_BOOKED)
     }
 
     @Test
@@ -106,7 +106,7 @@ class BookingServiceTest {
         val thrown = org.junit.jupiter.api.Assertions.assertThrows(TicketingException::class.java) {
             bookingService.cancel(1L, "user-999")
         }
-        assertThat(thrown.errorCode).isEqualTo(ErrorCode.BOOKING_FORBIDDEN)
+        assertThat(thrown.errorCode).isEqualTo(TicketingErrorCode.BOOKING_FORBIDDEN)
     }
 
     @Test

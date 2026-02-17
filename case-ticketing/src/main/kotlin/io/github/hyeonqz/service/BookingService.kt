@@ -4,7 +4,7 @@ import io.github.hyeonqz.domain.Booking
 import io.github.hyeonqz.domain.SeatStatus
 import io.github.hyeonqz.dto.request.BookingRequest
 import io.github.hyeonqz.dto.response.BookingResponse
-import io.github.hyeonqz.exception.ErrorCode
+import io.github.hyeonqz.exception.TicketingErrorCode
 import io.github.hyeonqz.exception.TicketingException
 import io.github.hyeonqz.repository.BookingRepository
 import io.github.hyeonqz.repository.SeatRepository
@@ -36,12 +36,12 @@ class BookingService(
 
         // 2단계: 좌석 조회
         val seat = seatRepository.findById(request.seatId).orElseThrow {
-            TicketingException(ErrorCode.SEAT_NOT_FOUND)
+            TicketingException(TicketingErrorCode.SEAT_NOT_FOUND)
         }
 
         // 3단계: 좌석 상태 확인 (BOOKED → 즉시 409)
         if (seat.status == SeatStatus.BOOKED) {
-            throw TicketingException(ErrorCode.SEAT_ALREADY_BOOKED)
+            throw TicketingException(TicketingErrorCode.SEAT_ALREADY_BOOKED)
         }
 
         // 4단계: 낙관적 락으로 상태 변경
@@ -69,11 +69,11 @@ class BookingService(
     @Transactional
     fun cancel(bookingId: Long, userId: String) {
         val booking = bookingRepository.findById(bookingId).orElseThrow {
-            TicketingException(ErrorCode.BOOKING_NOT_FOUND)
+            TicketingException(TicketingErrorCode.BOOKING_NOT_FOUND)
         }
 
         if (booking.userId != userId) {
-            throw TicketingException(ErrorCode.BOOKING_FORBIDDEN)
+            throw TicketingException(TicketingErrorCode.BOOKING_FORBIDDEN)
         }
 
         booking.cancel()
@@ -83,7 +83,7 @@ class BookingService(
     @Transactional(readOnly = true)
     fun getBooking(bookingId: Long): BookingResponse {
         val booking = bookingRepository.findById(bookingId).orElseThrow {
-            TicketingException(ErrorCode.BOOKING_NOT_FOUND)
+            TicketingException(TicketingErrorCode.BOOKING_NOT_FOUND)
         }
         return BookingResponse.from(booking)
     }
