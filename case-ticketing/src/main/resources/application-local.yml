@@ -35,6 +35,17 @@ spring:
         read-only: true
 
   # ============================================
+  # Flyway 설정
+  # ============================================
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    url: jdbc:mysql://localhost:3306/ticketing?useSSL=false&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+    user: root
+    password: root1234
+
+  # ============================================
   # JPA 설정
   # ============================================
   jpa:
@@ -61,15 +72,19 @@ spring:
     open-in-view: false
 
   # ============================================
-  # Redis 설정 (Master-Slave with Sentinel)
+  # Redis 설정 (Standalone - localhost 직접 연결)
   # ============================================
+  # [Bug Fix] Sentinel 모드 비활성화 이유:
+  #   Sentinel이 Docker 내부 IP(e.g. 172.20.0.x)를 Lettuce에 반환하지만,
+  #   macOS 호스트에서는 Docker 내부 IP에 직접 접근 불가 →
+  #   RedisConnectionFailureException 발생 (애플리케이션 시작 실패)
+  #
+  # 해결: 로컬 개발 환경에서는 Docker 포트 매핑(6379:6379)을 통해 Master에 직접 연결
+  # Sentinel/Slave 기능 테스트는 Docker 네트워크 내부(compose 환경)에서 진행
   data:
     redis:
-      # Sentinel 모드 설정
-      sentinel:
-        master: mymaster
-        nodes:
-          - localhost:26379
+      host: localhost
+      port: 6379
       password:
       database: 0
       timeout: 3000ms
@@ -83,8 +98,6 @@ spring:
           max-wait: 3000ms
         shutdown-timeout: 200ms
 
-      # 읽기 전략: Slave 우선 읽기 (부하 분산)
-      # 옵션: MASTER, MASTER_PREFERRED, REPLICA, REPLICA_PREFERRED
       client-type: lettuce
 
   # ============================================
@@ -157,8 +170,8 @@ logging:
     org.hibernate.SQL: INFO
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.kafka: INFO
-    org.springframework.data.redis: DEBUG
-    io.lettuce.core: DEBUG
+    org.springframework.data.redis: INFO
+    io.lettuce.core: INFO
     com.zaxxer.hikari: INFO
 
 # ============================================
